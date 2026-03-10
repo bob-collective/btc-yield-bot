@@ -1,0 +1,4 @@
+[submodule "vendor/agentkit"]
+	path = vendor/agentkit
+	url = https://github.com/bob-collective/agentkit.git
+	branch = feat/bob-gateway-action-provider
