@@ -14,6 +14,10 @@ export interface CycleAgents {
   heavyAgent: any;
 }
 
+export interface CycleResult {
+  stepOutputs: string[];
+}
+
 /** Run a cycle and send delta-only Telegram notifications. Returns updated lastHeartbeat timestamp. */
 export async function runCycleWithNotify(
   agents: CycleAgents,
@@ -95,7 +99,7 @@ async function runCycle(
   protocolRegistry: ProtocolRegistry,
   walletProvider: InstrumentedWalletProvider,
   vaultsfyiApiKey?: string,
-) {
+): Promise<CycleResult> {
   const { lightAgent, heavyAgent } = agents;
 
   const cycleId = Date.now().toString();
@@ -110,6 +114,8 @@ async function runCycle(
     cycleUsage.cacheWriteTokens += result.usage.cacheWriteTokens;
   }
 
+  const stepOutputs: string[] = [];
+
   // Step 1: Check balances (light agent)
   walletProvider.setContext("check_balances");
   const step1Result = await runAgentTask(
@@ -121,6 +127,7 @@ async function runCycle(
   );
   addUsage(step1Result);
   const balanceOutput = step1Result.output;
+  stepOutputs.push(balanceOutput);
 
   // Step 2: Discover best yields via vaults.fyi (no LLM)
   log.info("Fetching yield data from vaults.fyi");
@@ -182,6 +189,7 @@ Rules:
   );
   addUsage(step3Result);
   const step3Output = step3Result.output;
+  stepOutputs.push(step3Output);
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step3Output);
 
   // Step 4: Rebalance (heavy agent)
@@ -200,6 +208,7 @@ ${protocolRegistry.formatForPrompt()}
   );
   addUsage(step4Result);
   const step4Output = step4Result.output;
+  stepOutputs.push(step4Output);
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step4Output);
 
   // Step 5: Claim rewards (light agent)
@@ -212,6 +221,7 @@ ${protocolRegistry.formatForPrompt()}
   );
   addUsage(step5Result);
   const step5Output = step5Result.output;
+  stepOutputs.push(step5Output);
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step5Output);
 
   // Log cycle token usage (all LLM steps complete)
@@ -229,7 +239,7 @@ ${protocolRegistry.formatForPrompt()}
     portfolioValueUsd = portfolio.totalUsd;
   } catch (err) {
     log.error("Failed to get portfolio value for profit check:", safeErrorMessage(err));
-    return;
+    return { stepOutputs };
   }
 
   const profit = profitTracker.calculateProfit(entries, portfolioValueUsd);
@@ -237,7 +247,7 @@ ${protocolRegistry.formatForPrompt()}
 
   if (profit <= config.profitThresholdUsd) {
     log.info(`Profit $${profit.toFixed(2)} below threshold $${config.profitThresholdUsd} — skipping cash-out`);
-    return;
+    return { stepOutputs };
   }
 
   // Step 6b: Cash out (heavy agent — only if profit exceeds threshold)
@@ -258,5 +268,8 @@ ${protocolRegistry.formatForPrompt()}
   );
   addUsage(step6Result);
   const step6Output = step6Result.output;
+  stepOutputs.push(step6Output);
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step6Output);
+
+  return { stepOutputs };
 }
