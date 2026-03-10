@@ -236,4 +236,43 @@ describe("agent", () => {
       expect(result.usage.cacheReadTokens).toBe(1000);
     });
   });
+
+  describe("estimateCostUsd", () => {
+    it("calculates Sonnet cost with cache hits", async () => {
+      const { estimateCostUsd } = await import("../agent");
+      const usage = {
+        inputTokens: 20000,
+        outputTokens: 2000,
+        cacheReadTokens: 15000,
+        cacheWriteTokens: 0,
+      };
+      const cost = estimateCostUsd("claude-sonnet-4-6", usage);
+      // uncached input: 5000 * $3/M = $0.015
+      // cached input: 15000 * $0.30/M = $0.0045
+      // output: 2000 * $15/M = $0.030
+      // total = $0.0495
+      expect(cost).toBeCloseTo(0.0495, 4);
+    });
+
+    it("calculates Haiku cost without caching", async () => {
+      const { estimateCostUsd } = await import("../agent");
+      const usage = {
+        inputTokens: 10000,
+        outputTokens: 500,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      };
+      const cost = estimateCostUsd("claude-haiku-4-5-20251001", usage);
+      // input: 10000 * $1/M = $0.01
+      // output: 500 * $5/M = $0.0025
+      // total = $0.0125
+      expect(cost).toBeCloseTo(0.0125, 4);
+    });
+
+    it("returns 0 for unknown model", async () => {
+      const { estimateCostUsd } = await import("../agent");
+      const usage = { inputTokens: 1000, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 };
+      expect(estimateCostUsd("unknown-model", usage)).toBe(0);
+    });
+  });
 });
