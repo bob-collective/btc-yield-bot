@@ -1,6 +1,6 @@
 import { createLogger, safeErrorMessage, notify } from "./notify";
 import { type AgentConfig } from "./config";
-import { TxLogger, type TransactionEntry, processCapturedTxs } from "./modules/transactions";
+import { TxLogger, processCapturedTxs } from "./modules/transactions";
 import { ProfitTracker, discoverVaultYields, getPortfolioValueUsd } from "./modules/portfolio";
 import { ProtocolRegistry } from "./modules/protocol-registry";
 import { InstrumentedWalletProvider } from "./modules/instrumented-wallet";
@@ -84,41 +84,6 @@ ${cycleResult.stepOutputs.join("\n---\n")}`
 
   log.info("No-op cycle, skipping Telegram notification (already notified today)");
   return { lastHeartbeat: Date.now(), lastNoOpNotified: timestamps.lastNoOpNotified };
-}
-
-/** Summarize new transactions into a user-friendly Telegram message. */
-export function summarizeTransactions(entries: TransactionEntry[]): string {
-  const lines: string[] = [];
-
-  for (const tx of entries) {
-    switch (tx.type) {
-      case "deposit":
-        lines.push(`Deposited $${tx.usdValueAtTime} ${tx.tokenIn}${tx.protocol ? ` into ${tx.protocol}` : ""}`);
-        break;
-      case "withdraw":
-        lines.push(`Withdrew $${tx.usdValueAtTime} ${tx.tokenIn}${tx.protocol ? ` from ${tx.protocol}` : ""}`);
-        break;
-      case "rebalance":
-        lines.push(`Rebalanced $${tx.usdValueAtTime} ${tx.tokenIn}${tx.tokenOut ? ` → ${tx.tokenOut}` : ""}${tx.protocol ? ` via ${tx.protocol}` : ""}`);
-        break;
-      case "swap":
-        lines.push(`Swapped ${tx.amountIn} ${tx.tokenIn}${tx.tokenOut ? ` → ${tx.amountOut ?? ""} ${tx.tokenOut}` : ""} ($${tx.usdValueAtTime})`);
-        break;
-      case "claim_reward":
-        lines.push(`Claimed $${tx.usdValueAtTime} in rewards${tx.protocol ? ` from ${tx.protocol}` : ""}`);
-        break;
-      case "cash_out_btc":
-        lines.push(`Profit cash-out: ${tx.amountOut ?? tx.amountIn} BTC sent`);
-        break;
-      case "funding_received":
-        lines.push(`Funding received: $${tx.usdValueAtTime} ${tx.tokenIn}`);
-        break;
-      default:
-        lines.push(`${tx.type}: $${tx.usdValueAtTime} ${tx.tokenIn}`);
-    }
-  }
-
-  return lines.join("\n");
 }
 
 async function runCycle(
