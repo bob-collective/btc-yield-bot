@@ -204,7 +204,7 @@ ${yieldContext}
 
 ${protocolRegistry.formatForPrompt()}
 
-Check my current vault positions using the positions tool.
+My current vault positions are listed below.
 ${knownPositionsContext}
 If I have idle USDC or wBTC/cbBTC not deployed in vaults, deploy into the best vaults.
 The vaults above are ranked by APY (highest first). Pick the top vault where the

@@ -39,7 +39,14 @@ export async function createAgents(
     ],
   });
 
-  const tools = await getLangChainTools(agentkit);
+  const allTools = await getLangChainTools(agentkit);
+
+  // Filter out tools whose data is already fetched by code and injected into prompts.
+  // - vaults: Step 2 fetches vault yields via discoverVaultYields() and passes them in context
+  // - positions: Cycle start fetches positions via getPortfolioValueUsd() and passes them in context
+  // Keeping these tools causes the LLM to redundantly re-fetch, wasting ~45% of vaults.fyi credits.
+  const excludedTools = new Set(["VaultsfyiActionProvider_vaults", "VaultsfyiActionProvider_positions"]);
+  const tools = allTools.filter((t: any) => !excludedTools.has(t.name));
 
   const systemPrompt = `You are btc-yield-agent, an autonomous yield farming agent on Base.
 
