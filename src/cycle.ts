@@ -5,15 +5,13 @@ import { ProfitTracker, discoverVaultYields, getPortfolioValueUsd } from "./modu
 import { ProtocolRegistry } from "./modules/protocol-registry";
 import { InstrumentedWalletProvider } from "./modules/instrumented-wallet";
 import { TelegramBot } from "./modules/telegram";
-import { runAgentTask, estimateCostUsd, type TokenUsage, type AgentTaskResult } from "./agent";
+import { runAgentTask, type TokenUsage, type AgentTaskResult } from "./agent";
 
 const log = createLogger("Cycle");
 
 export interface CycleAgents {
   lightAgent: any;
   heavyAgent: any;
-  lightThreadConfig: { configurable: { thread_id: string } };
-  heavyThreadConfig: { configurable: { thread_id: string } };
 }
 
 /** Run a cycle and send delta-only Telegram notifications. Returns updated lastHeartbeat timestamp. */
@@ -98,7 +96,11 @@ async function runCycle(
   walletProvider: InstrumentedWalletProvider,
   vaultsfyiApiKey?: string,
 ) {
-  const { lightAgent, heavyAgent, lightThreadConfig, heavyThreadConfig } = agents;
+  const { lightAgent, heavyAgent } = agents;
+
+  const cycleId = Date.now().toString();
+  const lightThread = { configurable: { thread_id: `light-${cycleId}` } };
+  const heavyThread = { configurable: { thread_id: `heavy-${cycleId}` } };
 
   const cycleUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   function addUsage(result: AgentTaskResult) {
@@ -112,7 +114,7 @@ async function runCycle(
   walletProvider.setContext("check_balances");
   const step1Result = await runAgentTask(
     lightAgent,
-    lightThreadConfig,
+    lightThread,
     `Check my wallet balances. Report any USDC, wBTC, ETH, and WETH holdings.
      Use get_wallet_details for native ETH and get_balance for USDC and wBTC (WBTC).
      List each token and its balance.`
@@ -158,7 +160,7 @@ ${btcYields.summary}
   walletProvider.setContext("deploy_funds");
   const step3Result = await runAgentTask(
     heavyAgent,
-    heavyThreadConfig,
+    heavyThread,
     `Current wallet balances:
 ${balanceOutput}
 
@@ -186,7 +188,7 @@ Rules:
   walletProvider.setContext("rebalance");
   const step4Result = await runAgentTask(
     heavyAgent,
-    heavyThreadConfig,
+    heavyThread,
     `Compare my current vault positions against the best available yields shown above.
 
 ${protocolRegistry.formatForPrompt()}
@@ -204,13 +206,18 @@ ${protocolRegistry.formatForPrompt()}
   walletProvider.setContext("claim_rewards");
   const step5Result = await runAgentTask(
     lightAgent,
-    lightThreadConfig,
+    lightThread,
     `Check if any of my vault positions have claimable rewards using rewards_context.
      If there are claimable rewards, claim them.`
   );
   addUsage(step5Result);
   const step5Output = step5Result.output;
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step5Output);
+
+  // Log cycle token usage (all LLM steps complete)
+  log.info(
+    `Cycle tokens: ${cycleUsage.inputTokens} input (${cycleUsage.cacheReadTokens} cached) + ${cycleUsage.outputTokens} output`
+  );
 
   // Step 6a: Profit check (code only — no LLM)
   const entries = txLogger.getAll();
@@ -238,7 +245,7 @@ ${protocolRegistry.formatForPrompt()}
   walletProvider.setContext("cash_out");
   const step6Result = await runAgentTask(
     heavyAgent,
-    heavyThreadConfig,
+    heavyThread,
     `My profit is $${profit.toFixed(2)} (portfolio $${portfolioValueUsd.toFixed(2)} minus principal $${principalBasis.toFixed(2)}).
      This exceeds my cash-out threshold of $${config.profitThresholdUsd}.
 
@@ -252,8 +259,4 @@ ${protocolRegistry.formatForPrompt()}
   addUsage(step6Result);
   const step6Output = step6Result.output;
   processCapturedTxs(walletProvider.drainTxs(), txLogger, step6Output);
-
-  log.info(
-    `Cycle tokens: ${cycleUsage.inputTokens} input (${cycleUsage.cacheReadTokens} cached) + ${cycleUsage.outputTokens} output`
-  );
 }

@@ -90,15 +90,7 @@ Always log what you're doing and why.`;
     prompt: systemPrompt,
   });
 
-  const lightThreadConfig = {
-    configurable: { thread_id: "btc-yield-agent-light" },
-  };
-
-  const heavyThreadConfig = {
-    configurable: { thread_id: "btc-yield-agent-heavy" },
-  };
-
-  return { lightAgent, heavyAgent, lightThreadConfig, heavyThreadConfig, agentkit };
+  return { lightAgent, heavyAgent, agentkit };
 }
 
 export interface TokenUsage {

@@ -122,6 +122,20 @@ describe("agent", () => {
       );
     });
 
+    it("no longer returns thread configs", async () => {
+      const { createAgents } = await import("../agent");
+      const mockWallet = {
+        getAddress: () => "0xWallet",
+        getNetwork: () => ({ networkId: "base-mainnet" }),
+      } as any;
+
+      const result = await createAgents(mockWallet, { btcCashOutAddress: "bc1qtest" } as any);
+      expect(result).not.toHaveProperty("lightThreadConfig");
+      expect(result).not.toHaveProperty("heavyThreadConfig");
+      expect(result).toHaveProperty("lightAgent");
+      expect(result).toHaveProperty("heavyAgent");
+    });
+
     it("configures prompt caching and maxTokens on both models", async () => {
       const { createAgents } = await import("../agent");
       const { ChatAnthropic } = await import("@langchain/anthropic");
@@ -169,11 +183,12 @@ describe("agent", () => {
         getNetwork: () => ({ networkId: "base-mainnet" }),
       } as any;
 
-      const { lightAgent, lightThreadConfig } = await createAgents(mockWallet, {
+      const { lightAgent } = await createAgents(mockWallet, {
         btcCashOutAddress: "bc1qtest",
       } as any);
 
-      const result = await runAgentTask(lightAgent, lightThreadConfig, "check balances");
+      const threadConfig = { configurable: { thread_id: "test-thread" } };
+      const result = await runAgentTask(lightAgent, threadConfig, "check balances");
       expect(result.output).toBe("agent response");
       expect(result.usage.inputTokens).toBe(0);
       expect(result.usage.outputTokens).toBe(0);
@@ -209,11 +224,12 @@ describe("agent", () => {
         getNetwork: () => ({ networkId: "base-mainnet" }),
       } as any;
 
-      const { lightAgent, lightThreadConfig } = await createAgents(mockWallet, {
+      const { lightAgent } = await createAgents(mockWallet, {
         btcCashOutAddress: "bc1qtest",
       } as any);
 
-      const result = await runAgentTask(lightAgent, lightThreadConfig, "check balances");
+      const threadConfig = { configurable: { thread_id: "test-thread" } };
+      const result = await runAgentTask(lightAgent, threadConfig, "check balances");
       expect(result.output).toBe("done");
       expect(result.usage.inputTokens).toBe(1500);
       expect(result.usage.outputTokens).toBe(300);

@@ -61,8 +61,8 @@ async function main() {
   });
 
   // Create agents (light for read-only tasks, heavy for transactions)
-  const { lightAgent, heavyAgent, lightThreadConfig, heavyThreadConfig } = await createAgents(walletProvider, config);
-  const agents: CycleAgents = { lightAgent, heavyAgent, lightThreadConfig, heavyThreadConfig };
+  const { lightAgent, heavyAgent } = await createAgents(walletProvider, config);
+  const agents: CycleAgents = { lightAgent, heavyAgent };
 
   if (telegram.isEnabled()) {
     telegram.registerCommands({
@@ -72,14 +72,16 @@ async function main() {
       getProfitTracker: () => profitTracker,
       getWalletAddress: () => walletAddress,
       runAgentTask: async (prompt: string) => {
-        const result = await runAgentTask(heavyAgent, heavyThreadConfig, prompt);
+        const threadConfig = { configurable: { thread_id: `telegram-${Date.now()}` } };
+        const result = await runAgentTask(heavyAgent, threadConfig, prompt);
         return result.output;
       },
       triggerCashOut: async () => {
         const entries = txLogger.getAll();
         const principal = profitTracker.getRemainingPrincipal(entries);
         walletProvider.setContext("cash_out");
-        const result = await runAgentTask(heavyAgent, heavyThreadConfig,
+        const threadConfig = { configurable: { thread_id: `cashout-${Date.now()}` } };
+        const result = await runAgentTask(heavyAgent, threadConfig,
           `Check ETH balance — if below 0.0005 ETH, swap ~$1 USDC to native ETH via the Enso route tool (tokenOut: 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE).
            Then use swap_to_btc to send remaining USDC to ${config.btcCashOutAddress}.
            Report the order ID and transaction hash.`
