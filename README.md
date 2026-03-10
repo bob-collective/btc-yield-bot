@@ -19,7 +19,7 @@ pnpm -s start
 ## How It Works
 
 ```
-BTC → [BOB Gateway](https://docs.gobob.xyz/gateway/overview) → USDC on Base → DeFi vaults → profits → USDC → wBTC → [BOB Gateway](https://docs.gobob.xyz/gateway/overview) → BTC to your wallet
+BTC → BOB Gateway → USDC on Base → DeFi vaults → profits → USDC → BOB Gateway → BTC to your wallet
 ```
 
 1. You fund the agent by sending BTC through [BOB Gateway](https://docs.gobob.xyz/gateway/overview), which delivers USDC to the agent's smart wallet on Base.
