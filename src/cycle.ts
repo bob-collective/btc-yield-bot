@@ -18,7 +18,12 @@ export interface CycleResult {
   stepOutputs: string[];
 }
 
-/** Run a cycle and send delta-only Telegram notifications. Returns updated lastHeartbeat timestamp. */
+export interface CycleTimestamps {
+  lastHeartbeat: number;
+  lastNoOpNotified: number;
+}
+
+/** Run a cycle and send LLM-summarized Telegram notifications. Returns updated timestamps. */
 export async function runCycleWithNotify(
   agents: CycleAgents,
   config: AgentConfig,
@@ -27,33 +32,58 @@ export async function runCycleWithNotify(
   protocolRegistry: ProtocolRegistry,
   walletProvider: InstrumentedWalletProvider,
   telegram: TelegramBot,
-  lastHeartbeat: number,
+  timestamps: CycleTimestamps,
   vaultsfyiApiKey?: string,
-): Promise<number> {
+): Promise<CycleTimestamps> {
   if (telegram.isPaused()) {
     log.info("Paused via Telegram. Skipping check.");
     await telegram.alert("Skipped scheduled check (paused).");
-    return lastHeartbeat;
+    return timestamps;
   }
 
   const txCountBefore = txLogger.getAll().length;
-  await runCycle(agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, vaultsfyiApiKey);
+  const cycleResult = await runCycle(agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, vaultsfyiApiKey);
 
-  // Check what happened
-  const allTx = txLogger.getAll();
-  const newTx = allTx.slice(txCountBefore);
+  const newTxCount = txLogger.getAll().length - txCountBefore;
+  const hadActivity = newTxCount > 0;
 
-  if (newTx.length > 0) {
-    // Something happened — summarize
-    const summary = summarizeTransactions(newTx);
-    await telegram.alert(summary);
-    return Date.now();
+  // Generate LLM summary
+  let summary: string;
+  try {
+    const cycleId = Date.now().toString();
+    const summaryThread = { configurable: { thread_id: `summary-${cycleId}` } };
+    const summaryResult = await runAgentTask(
+      agents.lightAgent,
+      summaryThread,
+      `You are writing a Telegram notification for a yield farming agent.
+Summarize what happened this cycle in 2-5 lines. Be concise and natural.
+Include specific numbers (amounts, APY, protocol names) when relevant.
+If nothing happened, write a brief one-liner.
+No markdown headers. Use plain text with line breaks.
+
+Step outputs from this cycle:
+${cycleResult.stepOutputs.join("\n---\n")}`
+    );
+    summary = summaryResult.output;
+  } catch (err) {
+    log.error("Failed to generate cycle summary:", safeErrorMessage(err));
+    summary = hadActivity ? "Cycle completed with activity." : "Cycle completed, no action needed.";
   }
 
-  // Nothing happened — always notify
-  const timeStr = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-  await telegram.alert(`Checked at ${timeStr} — no action needed.`);
-  return Date.now();
+  if (hadActivity) {
+    await telegram.alert(summary);
+    return { lastHeartbeat: Date.now(), lastNoOpNotified: timestamps.lastNoOpNotified };
+  }
+
+  // No-op: only notify once per 20 hours
+  const hoursSinceLastNoOp = (Date.now() - timestamps.lastNoOpNotified) / (1000 * 60 * 60);
+  if (hoursSinceLastNoOp >= 20) {
+    await telegram.alert(summary);
+    return { lastHeartbeat: Date.now(), lastNoOpNotified: Date.now() };
+  }
+
+  log.info("No-op cycle, skipping Telegram notification (already notified today)");
+  return { lastHeartbeat: Date.now(), lastNoOpNotified: timestamps.lastNoOpNotified };
 }
 
 /** Summarize new transactions into a user-friendly Telegram message. */

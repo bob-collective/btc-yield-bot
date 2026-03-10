@@ -102,9 +102,8 @@ async function main() {
 
   // Run initial check
   log.info("Running initial portfolio check");
-  let lastHeartbeat = 0;
-  await runCycleWithNotify(agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, telegram, lastHeartbeat, env.VAULTSFYI_API_KEY)
-    .then((t) => { lastHeartbeat = t; });
+  let timestamps = { lastHeartbeat: 0, lastNoOpNotified: 0 };
+  timestamps = await runCycleWithNotify(agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, telegram, timestamps, env.VAULTSFYI_API_KEY);
 
   // Schedule recurring cycles
   const intervalMs = config.rebalanceIntervalHours * 60 * 60 * 1000;
@@ -113,8 +112,8 @@ async function main() {
   const timer = setInterval(async () => {
     log.info("Starting portfolio check");
     try {
-      lastHeartbeat = await runCycleWithNotify(
-        agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, telegram, lastHeartbeat, env.VAULTSFYI_API_KEY
+      timestamps = await runCycleWithNotify(
+        agents, config, txLogger, profitTracker, protocolRegistry, walletProvider, telegram, timestamps, env.VAULTSFYI_API_KEY
       );
     } catch (err) {
       log.error("Check failed:", safeErrorMessage(err));
