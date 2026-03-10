@@ -1,0 +1,11 @@
+{
+  "btcCashOutAddress": "",
+  "evmWalletAddress": "",
+  "usdcSplitPercent": 70,
+  "profitThresholdUsd": 500,
+  "rebalanceIntervalHours": 6,
+  "minSwapAmountUsd": 5,
+  "maxVaultAllocationPercent": 70,
+  "minVaultTvlUsd": 100000,
+  "gasReserveUsdc": 1.5
+}

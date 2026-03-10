@@ -98,6 +98,8 @@ async function main() {
     walletAddress,
     txLogger,
   );
+  // Connect wallet provider to funding monitor so bot-initiated txs are excluded
+  walletProvider.onTxCaptured = (hash) => fundingMonitor.registerPendingHash(hash);
   await fundingMonitor.start(30_000);
 
   // Run initial check

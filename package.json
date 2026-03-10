@@ -1,0 +1,42 @@
+{
+  "name": "btc-yield-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "packageManager": "pnpm@10.7.0",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "postinstall": "bash ./scripts/build-agentkit.sh",
+    "start": "NODE_OPTIONS='--no-warnings' tsx ./src/index.ts",
+    "configure": "NODE_OPTIONS='--no-warnings' tsx ./src/setup.ts",
+    "export-csv": "tsx ./src/export.ts csv",
+    "export-json": "tsx ./src/export.ts json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@coinbase/agentkit": "link:vendor/agentkit/typescript/agentkit",
+    "@coinbase/agentkit-langchain": "link:vendor/agentkit/typescript/framework-extensions/langchain",
+    "@langchain/anthropic": "^1.3.0",
+    "@langchain/core": "^1.1.30",
+    "@langchain/langgraph": "^1.2.0",
+    "dotenv": "^17.0.0",
+    "node-telegram-bot-api": "^0.67.0",
+    "permissionless": "^0.2.46",
+    "viem": "^2.38.3",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@coinbase/agentkit": "link:vendor/agentkit/typescript/agentkit"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@types/node-telegram-bot-api": "^0.64.14",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.0",
+    "vitest": "^4.0.0"
+  }
+}

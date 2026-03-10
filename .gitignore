@@ -3,5 +3,8 @@ dist/
 data/
 .env
 *.log
+*.bak
+.DS_Store
 pnpm-lock.yaml
 docs/plans/
+config.json

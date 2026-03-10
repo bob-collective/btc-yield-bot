@@ -128,7 +128,7 @@ export async function runAgentTask(
 ): Promise<AgentTaskResult> {
   const stream = await agent.stream(
     { messages: [new HumanMessage(taskMessage)] },
-    threadConfig
+    { ...threadConfig, recursionLimit: 50 },
   );
 
   let lastOutput = "";
