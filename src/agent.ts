@@ -56,14 +56,24 @@ IMPORTANT: BOB Gateway offramp transactions require a small amount of native ETH
 use the Enso route tool to swap ~$1 worth of USDC to ETH (tokenOut: 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE).
 Always log what you're doing and why.`;
 
+  const promptCachingOptions = {
+    clientOptions: {
+      defaultHeaders: { "anthropic-beta": "prompt-caching-2024-07-31" },
+    },
+  };
+
   const lightLlm = new ChatAnthropic({
     model: "claude-haiku-4-5-20251001",
     anthropicApiKey: env.ANTHROPIC_API_KEY,
+    maxTokens: 1024,
+    ...promptCachingOptions,
   });
 
   const heavyLlm = new ChatAnthropic({
     model: "claude-sonnet-4-6",
     anthropicApiKey: env.ANTHROPIC_API_KEY,
+    maxTokens: 4096,
+    ...promptCachingOptions,
   });
 
   const lightAgent = createReactAgent({

@@ -122,6 +122,43 @@ describe("agent", () => {
       );
     });
 
+    it("configures prompt caching and maxTokens on both models", async () => {
+      const { createAgents } = await import("../agent");
+      const { ChatAnthropic } = await import("@langchain/anthropic");
+      const mockWallet = {
+        getAddress: () => "0xWallet",
+        getNetwork: () => ({ networkId: "base-mainnet" }),
+      } as any;
+
+      await createAgents(mockWallet, { btcCashOutAddress: "bc1qtest" } as any);
+
+      // Light model: maxTokens 1024
+      expect(ChatAnthropic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: "claude-haiku-4-5-20251001",
+          maxTokens: 1024,
+          clientOptions: expect.objectContaining({
+            defaultHeaders: expect.objectContaining({
+              "anthropic-beta": "prompt-caching-2024-07-31",
+            }),
+          }),
+        })
+      );
+
+      // Heavy model: maxTokens 4096
+      expect(ChatAnthropic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: "claude-sonnet-4-6",
+          maxTokens: 4096,
+          clientOptions: expect.objectContaining({
+            defaultHeaders: expect.objectContaining({
+              "anthropic-beta": "prompt-caching-2024-07-31",
+            }),
+          }),
+        })
+      );
+    });
+
   });
 
   describe("runAgentTask", () => {
