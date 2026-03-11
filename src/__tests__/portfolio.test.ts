@@ -200,6 +200,18 @@ describe("ProfitTracker", () => {
       expect(history[0].protocol).toBe("sushi");
     });
 
+    it("marks vault active after partial withdrawal", () => {
+      const entries = [
+        makeTx({ type: "deposit", usdValueAtTime: 500, protocol: "morpho", vault: "morpho-usdc" }),
+        makeTx({ type: "withdraw", usdValueAtTime: 100, protocol: "morpho", vault: "morpho-usdc" }),
+      ];
+      const history = tracker.getVaultHistory(entries);
+      const morpho = history.find((h) => h.vault === "morpho-usdc")!;
+      expect(morpho.totalDeposited).toBe(500);
+      expect(morpho.totalWithdrawn).toBe(100);
+      expect(morpho.isActive).toBe(true);
+    });
+
     it("ignores entries without a protocol", () => {
       const entries = [
         makeTx({ type: "deposit", usdValueAtTime: 100 }),

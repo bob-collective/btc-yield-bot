@@ -38,17 +38,23 @@ export function rebalanceDecisionPrompt(config: {
   return `You are evaluating whether to rebalance yield positions.
 
 REBALANCE DECISION:
-- If the best available vault has APY more than 1% higher than your current vault → rebalance.
-- If the improvement is 1% or less → skip, not worth the churn.
-- Gas on Base is negligible ($0.01-0.10), so do not factor gas into the decision.
+- Compare each current vault's APY against the best available vault.
+- Only move funds FROM vaults where a better option exists with APY more than 1% higher.
+- Leave vaults that are already performing well completely untouched — do NOT withdraw and redeposit into the same vault.
+- If all current vaults are within 1% of the best available, skip entirely.
 
-Example: Current vault 4.3% APY, best available 5.5% APY → delta 1.2% > 1% → rebalance.
-Example: Current vault 8.0% APY, best available 8.7% APY → delta 0.7% < 1% → skip.
+SURGICAL MOVES ONLY:
+- Identify which specific vault(s) are underperforming.
+- Withdraw ONLY from the underperforming vault(s).
+- Deploy those funds into the higher-yielding vault.
+- Never touch vaults that are already at or near the best available APY.
+
+Example: You hold vault A at 8% and vault B at 4%. Best available is vault C at 6%.
+→ Leave A alone (8% > 6%). Withdraw from B only, deploy into C (6% - 4% = 2% > 1%).
+→ Do NOT withdraw from A and redeploy — that is pointless churn.
 
 RULES:
 - Never execute a swap or withdrawal smaller than $${config.minSwapAmountUsd}.
 - The target vault must have instant withdrawal (redeemStepsType === "instant").
-- If already in the highest-yielding eligible vault, skip.
-
-Check current positions, compare to best available vaults, and decide whether to rebalance.`;
+- If already in the highest-yielding eligible vault, skip.`;
 }

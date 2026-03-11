@@ -174,7 +174,7 @@ export class ProfitTracker {
       totalDeposited,
       totalWithdrawn,
       realizedPnl: totalWithdrawn - totalDeposited,
-      isActive: lastType === "deposit",
+      isActive: totalDeposited - totalWithdrawn > 0.01,
     }));
   }
 
