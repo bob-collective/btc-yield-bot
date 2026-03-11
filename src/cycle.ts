@@ -147,11 +147,16 @@ If the positions tool returns empty but the above shows active positions, DO NOT
   }
 
   // Consolidated portfolio summary (wallet + vault positions)
+  // Use tx-log totals for per-vault display since activeVaults always comes from tx log
+  const txLogTotal = activeVaults.reduce((sum, v) => sum + Math.max(0, v.totalDeposited - v.totalWithdrawn), 0);
   const posSource = portfolio.positionsSource !== "none" ? ` (source: ${portfolio.positionsSource})` : "";
+  const apiNote = portfolio.positionsSource === "api" && Math.abs(txLogTotal - portfolio.vaultPositionsUsd) > 1
+    ? `\nAPI reports: ~$${portfolio.vaultPositionsUsd.toFixed(2)} (may differ due to smart account indexing delay)`
+    : "";
   const portfolioSummary = activeVaults.length > 0
     ? `\n\nVault positions${posSource}:\n${activeVaults.map(
         (v) => `  ${v.protocol} (${v.vault}): ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)}`,
-      ).join("\n")}\nEstimated vault total: ~$${portfolio.vaultPositionsUsd.toFixed(2)}`
+      ).join("\n")}\nEstimated vault total: ~$${txLogTotal.toFixed(2)}${apiNote}`
     : "\n\nVault positions: none";
   const fullPortfolioOutput = balanceOutput + portfolioSummary;
   stepOutputs.push(fullPortfolioOutput);
