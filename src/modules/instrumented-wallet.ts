@@ -25,7 +25,7 @@ const log = createLogger("instrumented-wallet");
 // ---------------------------------------------------------------------------
 
 export interface CapturedTx {
-  hash: string;
+  hash: `0x${string}`;
   to: string;
   value?: bigint;
   data?: string;
