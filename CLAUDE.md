@@ -6,7 +6,7 @@
 pnpm install              # install deps + build agentkit submodule
 pnpm -s configure         # interactive first-time setup wizard
 pnpm -s start             # run agent (requires .env + config.json)
-pnpm test                 # vitest run (12 files, ~130 tests)
+pnpm test                 # vitest run (12 files, ~120 tests)
 pnpm test:watch           # vitest watch mode
 ```
 
@@ -25,7 +25,7 @@ src/
   agent.ts            # LangGraph agents: light (Haiku 4.5) + heavy (Sonnet 4.6) with agentkit
                       # Action providers: wallet, erc20, weth, pyth, vaultsfyi, bobGateway, enso
   config.ts           # merged: env validation (getEnv), path constants, JSON helpers, config schema
-  notify.ts           # unified logging + Telegram alerts: createLogger(tag), notify(level, msg)
+  notify.ts           # file logging (data/agent.log) + Telegram alerts: createLogger(tag), notify(level, msg)
   cycle.ts            # 6-step agent cycle + Telegram delta notifications
   prompts.ts          # system prompt fragments: vault selection + rebalance decision
   setup.ts            # interactive CLI setup wizard (standalone CLI script)
@@ -33,7 +33,7 @@ src/
   modules/
     circle-paymaster-wallet.ts  # ERC-4337 smart account + Circle Paymaster on Base
     instrumented-wallet.ts      # wraps EvmWalletProvider to capture every sendTransaction
-    transactions.ts   # merged: TxLogger + tx processing (context mapping, LLM output parsing)
+    transactions.ts   # TxLogger + receipt-based tx processing (on-chain Transfer event decoding)
     portfolio.ts      # merged: DeFiLlama yields + profit tracking + portfolio value query
     protocol-registry.ts  # persistent vault withdrawal-type cache (instant vs complex)
     telegram.ts       # Telegram bot: commands + inline keyboard (alerts via notify.ts)
@@ -43,12 +43,12 @@ src/
 ## Code Conventions
 
 - All env access through `getEnv()` from src/config.ts — never raw `process.env`
-- All logging through `createLogger(tag)` from src/notify.ts — never raw `console.*`
+- All logging through `createLogger(tag)` from src/notify.ts — writes to data/agent.log, never console
   (exception: CLI scripts like setup.ts and export.ts use console.log for user output)
 - Unified alerts: use `notify(level, msg)` from src/notify.ts — logs + sends Telegram for warn/error
 - Error messages: use `safeErrorMessage(err)` from src/notify.ts to avoid leaking stack traces
 - JSON file I/O: use `readJsonFile`/`writeJsonFile` from src/config.ts
-- Path constants: import from src/config.ts (DATA_DIR, TX_LOG_PATH, etc.)
+- Path constants: import from src/config.ts (DATA_DIR, TX_LOG_PATH, LOG_PATH, etc.)
 
 ## Testing
 
