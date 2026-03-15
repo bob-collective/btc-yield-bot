@@ -230,8 +230,12 @@ export async function getPortfolioValueUsd(
         const positions = json.data ?? json;
         if (Array.isArray(positions) && positions.length > 0) {
           vaultPositionsUsd = positions.reduce((sum: number, p: any) => {
-            const balUsd = parseFloat(p.asset?.balanceUsd ?? "0") || 0;
-            return sum + balUsd;
+            const positionValue = p.asset?.positionValueInAsset;
+            const decimals = p.asset?.decimals ?? 6;
+            const usd = positionValue
+              ? Number(positionValue) / 10 ** decimals
+              : parseFloat(p.lpToken?.balanceUsd ?? "0") || 0;
+            return sum + usd;
           }, 0);
           positionsSource = "api";
           log.info(`Positions API returned $${vaultPositionsUsd.toFixed(2)}`);

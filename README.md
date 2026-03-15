@@ -98,7 +98,7 @@ The project uses a [[BOB Gateway](https://docs.gobob.xyz/gateway/overview) fork 
 
 ## Transaction Log
 
-All transactions logged to `data/transactions.json`.
+All transactions logged to `data/transactions.json`. Runtime logs are written to `data/agent.log`.
 
 ```bash
 pnpm -s export-csv

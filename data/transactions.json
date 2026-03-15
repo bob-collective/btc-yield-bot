@@ -223,5 +223,45 @@
     "txHash": "0xc7351fedfbaa676be55f17990d467a9d5b930c589bae4158c32cc9581ce474bc",
     "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
     "timestamp": "2026-03-11T23:07:06.775Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "12.62",
+    "usdValueAtTime": 12.62,
+    "txHash": "reconciliation-0x3094-20260315",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "notes": "Reconciliation: position was consolidated into 0xBEEF per on-chain state",
+    "timestamp": "2026-03-15T15:30:00.000Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "5.12",
+    "usdValueAtTime": 5.12,
+    "txHash": "reconciliation-0x4C1a-20260315",
+    "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
+    "notes": "Reconciliation: position was consolidated into 0xBEEF per on-chain state",
+    "timestamp": "2026-03-15T15:30:00.000Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "17.74",
+    "usdValueAtTime": 17.74,
+    "txHash": "reconciliation-0xBEEF-20260315",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "notes": "Reconciliation: consolidated funds from 0x3094 ($12.62) + 0x4C1a ($5.12)",
+    "timestamp": "2026-03-15T15:30:00.000Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "5.94",
+    "usdValueAtTime": 5.94,
+    "txHash": "reconciliation-yield-0xBEEF-20260315",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "notes": "Reconciliation: accrued yield in Morpho Steakhouse vault (on-chain $24.04 vs tx-log $18.10)",
+    "timestamp": "2026-03-15T15:45:00.000Z"
   }
 ]

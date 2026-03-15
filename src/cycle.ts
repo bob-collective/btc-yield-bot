@@ -133,9 +133,10 @@ async function runCycle(
   const balanceOutput = step1Result.output;
 
   // Build known-positions context from portfolio snapshot for Steps 3 & 4
+  // When API returns real data, skip tx-log positions to avoid feeding stale estimates
   const { activeVaults } = portfolio;
   let knownPositionsContext = "";
-  if (activeVaults.length > 0) {
+  if (portfolio.positionsSource !== "api" && activeVaults.length > 0) {
     const posLines = activeVaults.map(
       (v) => {
         const label = v.protocol ?? `${v.vault.slice(0, 6)}...${v.vault.slice(-4)}`;
@@ -150,17 +151,17 @@ If the positions tool returns empty but the above shows active positions, DO NOT
   }
 
   // Consolidated portfolio summary (wallet + vault positions)
-  // Use tx-log totals for per-vault display since activeVaults always comes from tx log
+  // Prefer API value when available; fall back to tx-log totals
   const txLogTotal = activeVaults.reduce((sum, v) => sum + Math.max(0, v.totalDeposited - v.totalWithdrawn), 0);
+  const vaultTotal = portfolio.positionsSource === "api" ? portfolio.vaultPositionsUsd : txLogTotal;
   const posSource = portfolio.positionsSource !== "none" ? ` (source: ${portfolio.positionsSource})` : "";
-  const apiNote = portfolio.positionsSource === "api" && Math.abs(txLogTotal - portfolio.vaultPositionsUsd) > 1
-    ? `\nAPI reports: ~$${portfolio.vaultPositionsUsd.toFixed(2)} (may differ due to smart account indexing delay)`
-    : "";
-  const portfolioSummary = activeVaults.length > 0
-    ? `\n\nVault positions${posSource}:\n${activeVaults.map(
-        (v) => `  ${v.protocol ?? v.vault.slice(0, 10)} (${v.vault}): ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)}`,
-      ).join("\n")}\nEstimated vault total: ~$${txLogTotal.toFixed(2)}${apiNote}`
-    : "\n\nVault positions: none";
+  const portfolioSummary = (portfolio.positionsSource === "api" && portfolio.vaultPositionsUsd > 0)
+    ? `\n\nVault positions${posSource}:\n  Total: ~$${portfolio.vaultPositionsUsd.toFixed(2)} deployed in vaults`
+    : activeVaults.length > 0
+      ? `\n\nVault positions${posSource}:\n${activeVaults.map(
+          (v) => `  ${v.protocol ?? v.vault.slice(0, 10)} (${v.vault}): ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)}`,
+        ).join("\n")}\nEstimated vault total: ~$${txLogTotal.toFixed(2)}`
+      : "\n\nVault positions: none";
   const fullPortfolioOutput = balanceOutput + portfolioSummary;
   stepOutputs.push(fullPortfolioOutput);
   log.info(portfolioSummary.trim());
@@ -204,15 +205,14 @@ ${btcYields.summary}
   const step3Result = await runAgentTask(
     heavyAgent,
     heavyThread,
-    `Current wallet balances:
-${balanceOutput}
+    `Current portfolio:
+${fullPortfolioOutput}
 
 Here are the best vaults on Base (ranked by 30d APY, highest first):
 ${yieldContext}
 
 ${protocolRegistry.formatForPrompt()}
 
-My current vault positions are listed below.
 ${knownPositionsContext}
 If I have idle USDC or wBTC/cbBTC not deployed in vaults, deploy into the best vaults.
 The vaults above are ranked by APY (highest first). Pick the top vault where the
