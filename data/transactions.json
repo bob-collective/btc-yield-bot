@@ -1,0 +1,227 @@
+[
+  {
+    "timestamp": "2026-03-07T11:15:45.000Z",
+    "type": "funding_received",
+    "tokenIn": "USDC",
+    "amountIn": "9.161052",
+    "usdValueAtTime": 9.16,
+    "txHash": "0x05662edba63086bc05f8c4ad4be6905407e7471275b7ca4ab5ce1f10b292cfb3",
+    "protocol": "BOB Gateway",
+    "notes": "Initial funding via BOB Gateway bridge (0.24 + 8.92 USDC)"
+  },
+  {
+    "timestamp": "2026-03-07T18:24:25.000Z",
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "8.15",
+    "usdValueAtTime": 8.15,
+    "txHash": "0x7b9b8a7e226fa28ad24139386731fb29194abe9f010400be988729495a63c685",
+    "protocol": "Morpho",
+    "vault": "0xbeefa7b88064feef0cee02aaebbd95d30df3878f",
+    "notes": "Deposit into Morpho USDC vault"
+  },
+  {
+    "timestamp": "2026-03-07T18:29:43.000Z",
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "8.150003",
+    "usdValueAtTime": 8.15,
+    "txHash": "0xf3460328d57533d8a5c4040b53c3eb94f9eaa6139ddb708f3bfabc8a2110eea8",
+    "protocol": "Morpho",
+    "vault": "0xbeefa7b88064feef0cee02aaebbd95d30df3878f",
+    "notes": "Withdraw from Morpho USDC vault"
+  },
+  {
+    "timestamp": "2026-03-07T18:50:33.000Z",
+    "type": "swap",
+    "tokenIn": "USDC",
+    "tokenOut": "ETH",
+    "amountIn": "1",
+    "usdValueAtTime": 1,
+    "txHash": "0x454642b86f6a59254d8cbd6ad7c3212b7f75447babc16f8c867c11c32ba86639",
+    "protocol": "SushiSwap",
+    "notes": "Swap USDC to ETH for BOB Gateway bridge gas"
+  },
+  {
+    "timestamp": "2026-03-07T18:50:51.000Z",
+    "type": "cash_out_btc",
+    "tokenIn": "USDC",
+    "tokenOut": "BTC",
+    "amountIn": "7.044361",
+    "amountOut": "0.00009962",
+    "usdValueAtTime": 6.73,
+    "txHash": "0x2ca0342230adcb9cd3e816f0e430006d3971306ac19b5910599174b7a08f7326",
+    "protocol": "BOB Gateway",
+    "notes": "BTC offramp: sent 7.04 USDC, received 9962 sats"
+  },
+  {
+    "timestamp": "2026-03-07T19:04:07.000Z",
+    "type": "funding_received",
+    "tokenIn": "USDC",
+    "amountIn": "21.308727",
+    "usdValueAtTime": 21.31,
+    "txHash": "0x4a7ea27664e00526319eebd16578536533e18e65c755b15193d64e5c2766f6d5",
+    "protocol": "BOB Gateway",
+    "notes": "Second funding via BOB Gateway bridge"
+  },
+  {
+    "timestamp": "2026-03-10T14:11:18.000Z",
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "14.67",
+    "usdValueAtTime": 14.67,
+    "txHash": "0x1f80bfea1624b0819457ab5470e050f863e16a7eaf6d68edd2faff4473b975b7",
+    "protocol": "Morpho",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "notes": "Deposit into Morpho Steakhouse USDC vault (70%)"
+  },
+  {
+    "timestamp": "2026-03-10T14:11:19.000Z",
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "4.80",
+    "usdValueAtTime": 4.8,
+    "txHash": "0x03aa5b46a187da10dbbaa9666413aead658ad3cdd057a270541dde931abf4ac8",
+    "protocol": "Morpho",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "notes": "Deposit into Morpho Mo USD Max vault (23%)"
+  },
+  {
+    "timestamp": "2026-03-10T14:12:00.000Z",
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "14.67",
+    "usdValueAtTime": 14.67,
+    "txHash": "0x185fd0ae5029cf677942d6bd6d77d4b5f7e2085fc993a7ff0a46ff5d09141e20",
+    "protocol": "Morpho",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "notes": "Forced exit: withdraw from Steakhouse vault"
+  },
+  {
+    "timestamp": "2026-03-10T14:14:00.000Z",
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "4.80",
+    "usdValueAtTime": 4.8,
+    "txHash": "0x2b942bc1f0988c979f46c4138cebc1521c278547fcf504ace9264a6316a5c114",
+    "protocol": "Morpho",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "notes": "Forced exit: withdraw from Mo USD Max vault"
+  },
+  {
+    "timestamp": "2026-03-10T14:15:13.000Z",
+    "type": "cash_out_btc",
+    "tokenIn": "USDC",
+    "tokenOut": "BTC",
+    "amountIn": "18.872138",
+    "amountOut": "0.00025788",
+    "usdValueAtTime": 18.87,
+    "txHash": "0x69ac77dc06478437513a1e48d798d4c31f92ff0ec651a481e07f4fb64f54f2e4",
+    "protocol": "BOB Gateway",
+    "notes": "BTC offramp: sent 18.87 USDC via BOB Gateway"
+  },
+  {
+    "type": "funding_received",
+    "tokenIn": "USDC",
+    "amountIn": "23.888987",
+    "usdValueAtTime": 23.89,
+    "txHash": "0xf83f43993cb510ee1e5a28aa3f973260c99619da55c38743ca1375e74a8802cf",
+    "protocol": "external",
+    "notes": "Auto-detected incoming USDC from 0x86459915525398a815592e96b0ee5ef12d13401a",
+    "timestamp": "2026-03-10T15:35:10.024Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "6.13",
+    "usdValueAtTime": 6.13,
+    "txHash": "0x4c8cae17259822ebc9bba4682ba89a54baa0c3dbfa1fab9b92d3bcf6a5bbdd4d",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "timestamp": "2026-03-10T15:39:38.432Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "6.13",
+    "usdValueAtTime": 6.13,
+    "txHash": "0x43a75538f4f461d89a0d4fb827b233b6840f35862a4cb9bc0ed517423d9015bc",
+    "protocol": "Euler",
+    "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
+    "timestamp": "2026-03-10T15:39:38.440Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "1.50",
+    "usdValueAtTime": 6.13,
+    "txHash": "0x84bcbac95f95b2deb4c55f2e78f99c3a85585beb876b37577fecc5c5876e92eb",
+    "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
+    "timestamp": "2026-03-10T22:04:07.373Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "1.50",
+    "usdValueAtTime": 6.13,
+    "txHash": "0x6c33965f13a9fd82e037e746c0f50a53f53d297877c64ed8bbfa6864b05d2884",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "timestamp": "2026-03-10T22:04:07.374Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "1.50",
+    "usdValueAtTime": 6.13,
+    "txHash": "0xbf863d4051a699b78ea79cbccc5cf0aca035d4ae19f11d6c01980642cdd8d9d7",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "timestamp": "2026-03-10T22:04:07.375Z"
+  },
+  {
+    "type": "deposit",
+    "tokenIn": "USDC",
+    "amountIn": "1.50",
+    "usdValueAtTime": 6.13,
+    "txHash": "0x61016ee02b5fa0dd3948866c3f41e3a565f25fed6860ac7f34d997fda0d3e82e",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "timestamp": "2026-03-10T22:04:07.375Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "1.38",
+    "usdValueAtTime": 5.77,
+    "txHash": "0x5e86b93a2bbd9f4853fe715cef1f3ba04a695ff33ebd0690e57e3b53c94d4403",
+    "protocol": "Morpho",
+    "vault": "0x3094b241AaDe60F91f1c82b0628A10d9501462F9",
+    "timestamp": "2026-03-11T04:07:50.191Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "1.38",
+    "usdValueAtTime": 5.77,
+    "txHash": "0x1461a5834675c707222356b2140fa714fa500cdb9fce59927abb49bb195a8c66",
+    "protocol": "Morpho",
+    "vault": "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478",
+    "timestamp": "2026-03-11T04:07:50.194Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "USDC",
+    "amountIn": "1.38",
+    "usdValueAtTime": 5.77,
+    "txHash": "0xd992520ab7fbf9c23d16f2bd84a54e34ed1e31d326e92f26b49f875fdfe79298",
+    "protocol": "Morpho",
+    "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
+    "timestamp": "2026-03-11T04:07:50.194Z"
+  },
+  {
+    "type": "withdraw",
+    "tokenIn": "unknown",
+    "amountIn": "0",
+    "usdValueAtTime": 1.37,
+    "txHash": "0xc7351fedfbaa676be55f17990d467a9d5b930c589bae4158c32cc9581ce474bc",
+    "vault": "0x4C1aeda9B43EfcF1da1d1755b18802aAbe90f61E",
+    "timestamp": "2026-03-11T23:07:06.775Z"
+  }
+]
