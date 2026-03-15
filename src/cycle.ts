@@ -221,8 +221,7 @@ Redeem column shows "instant". Use transaction_context and execute_step to deplo
 Rules:
 - Always keep at least $${config.gasReserveUsdc} USDC in the wallet as a gas reserve. Never deploy this amount.
 - Do not deploy amounts less than $${config.minSwapAmountUsd}.
-- Never allocate more than ${config.maxVaultAllocationPercent}% of portfolio to a single vault.
-- Only consider vaults with TVL above $${config.minVaultTvlUsd.toLocaleString()}.`
+${config.maxVaultAllocationPercent < 100 ? `- Never allocate more than ${config.maxVaultAllocationPercent}% of portfolio to a single vault.\n` : ''}- Only consider vaults with TVL above $${config.minVaultTvlUsd.toLocaleString()}.`
   );
   addUsage(step3Result);
   const step3Output = step3Result.output;

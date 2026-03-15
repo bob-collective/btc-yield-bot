@@ -7,6 +7,7 @@ export const DATA_DIR = path.resolve(process.cwd(), "data");
 export const TX_LOG_PATH = path.join(DATA_DIR, "transactions.json");
 export const STATE_PATH = path.join(DATA_DIR, "agent-state.json");
 export const PROTOCOL_REGISTRY_PATH = path.join(DATA_DIR, "protocol-registry.json");
+export const LOG_PATH = path.join(DATA_DIR, "agent.log");
 export const CONFIG_PATH = path.resolve(process.cwd(), "config.json");
 
 // --- JSON file helpers (from utils/fs.ts) ---
@@ -53,7 +54,7 @@ export const ConfigSchema = z.object({
   profitThresholdUsd: z.number().nonnegative().default(500),
   rebalanceIntervalHours: z.number().positive().default(6),
   minSwapAmountUsd: z.number().positive().default(100),
-  maxVaultAllocationPercent: z.number().min(1).max(100).default(50),
+  maxVaultAllocationPercent: z.number().min(1).max(100).default(100),
   minVaultTvlUsd: z.number().positive().default(100000),
   gasReserveUsdc: z.number().nonnegative().default(5),
 });

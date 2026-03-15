@@ -7,8 +7,7 @@ export function vaultSelectionPrompt(config: {
 When selecting vaults to deposit into, follow these rules:
 
 ALLOCATION:
-- Never allocate more than ${config.maxVaultAllocationPercent}% of total portfolio to a single vault.
-- Only consider vaults with TVL above $${config.minVaultTvlUsd.toLocaleString()}.
+${config.maxVaultAllocationPercent < 100 ? `- Never allocate more than ${config.maxVaultAllocationPercent}% of total portfolio to a single vault.\n` : ''}- Only consider vaults with TVL above $${config.minVaultTvlUsd.toLocaleString()}.
 
 YIELD TARGETING:
 - The vault list you receive is ranked by APY descending (highest first).
