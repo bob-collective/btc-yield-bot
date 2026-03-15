@@ -1,6 +1,9 @@
 import { readJsonFile, writeJsonFile } from "../config";
 import { createLogger } from "../notify";
-import type { CapturedTx } from "./instrumented-wallet";
+import type { CapturedTx, InstrumentedWalletProvider } from "./instrumented-wallet";
+import { USDC_BASE_ADDRESS, CIRCLE_PAYMASTER_ADDRESS } from "./circle-paymaster-wallet";
+
+const USDC_DECIMALS = 6;
 
 const log = createLogger("tx-processor");
 
@@ -101,25 +104,6 @@ export function mapContextToTxType(context: string): TransactionEntry["type"] {
   return CONTEXT_TO_TYPE[context] ?? "swap";
 }
 
-/** Best-effort extract amount + token from LLM output text. */
-export function parseAmountFromOutput(output: string): { amount: string; token: string } | null {
-  const match = output.match(/(\d+\.?\d*)\s+(USDC|ETH|WETH|wBTC|WBTC|BTC|cbBTC)/i);
-  if (!match) return null;
-  return { amount: match[1], token: match[2] };
-}
-
-/** Best-effort extract protocol name from LLM output text. */
-export function parseProtocolFromOutput(output: string): string | undefined {
-  const match = output.match(/(?:into|from|via|on)\s+(\w+)/i);
-  return match?.[1];
-}
-
-/** Best-effort extract USD value from LLM output text. */
-export function parseUsdValueFromOutput(output: string): number {
-  const match = output.match(/\$(\d+\.?\d*)/);
-  return match ? parseFloat(match[1]) : 0;
-}
-
 // ---------------------------------------------------------------------------
 // ERC20 calldata detection
 // ---------------------------------------------------------------------------
@@ -141,56 +125,130 @@ export function isErc20ApprovOrTransfer(data?: string): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Process captured txs and write them to the TxLogger.
- * Uses context label for type mapping and LLM output for enrichment.
- * Filters out ERC20 approve/transfer calls (detected from calldata) and resolves
- * rebalance txs into proper withdraw/deposit pairs.
+ * Process captured txs by fetching on-chain receipts and decoding Transfer events.
+ * Replaces the previous LLM-text-parsing approach with exact on-chain data.
  */
-export function processCapturedTxs(
+export async function processCapturedTxs(
   captured: CapturedTx[],
   txLogger: TxLogger,
-  llmOutput: string,
-): void {
-  // Build set of active vault addresses to distinguish withdraw vs deposit in rebalances
-  const activeVaults = new Set(
-    txLogger.getAll()
-      .filter((e) => e.type === "deposit" && e.vault)
-      .map((e) => e.vault!.toLowerCase()),
+  walletProvider: InstrumentedWalletProvider,
+  walletAddress: string,
+): Promise<void> {
+  const wallet = walletAddress.toLowerCase();
+  const paymaster = CIRCLE_PAYMASTER_ADDRESS.toLowerCase();
+  const usdcAddress = USDC_BASE_ADDRESS.toLowerCase();
+
+  // Fetch all receipts in parallel
+  const receipts = await Promise.all(
+    captured.map(async (tx) => {
+      // Skip ERC20 approve/transfer calls before fetching receipt
+      if (isErc20ApprovOrTransfer(tx.data)) {
+        return { tx, receipt: null, skipped: true };
+      }
+      try {
+        const receipt = await walletProvider.waitForTransactionReceipt(tx.hash);
+        return { tx, receipt, skipped: false };
+      } catch (err) {
+        log.warn(`Failed to fetch receipt for ${tx.hash}: ${err}`);
+        return { tx, receipt: null, skipped: false };
+      }
+    }),
   );
 
-  const parsed = parseAmountFromOutput(llmOutput);
-  const protocol = parseProtocolFromOutput(llmOutput);
-  const usdValue = parseUsdValueFromOutput(llmOutput);
-
-  for (const tx of captured) {
-    // Skip ERC20 approve/transfer calls (detected from calldata, not hardcoded addresses)
-    if (isErc20ApprovOrTransfer(tx.data)) {
-      log.info(`skipping tx ${tx.hash} (ERC20 approve/transfer to ${tx.to})`);
+  for (const { tx, receipt, skipped } of receipts) {
+    if (skipped) {
+      log.info(`skipping tx ${tx.hash} (ERC20 approve/transfer)`);
       continue;
     }
 
     let type = mapContextToTxType(tx.context);
+    let tokenIn = "unknown";
+    let amountIn = "0";
+    let usdValue = 0;
 
-    // For rebalance context, determine if this is a withdraw or deposit
-    if (tx.context === "rebalance") {
-      const isActiveVault = activeVaults.has(tx.to.toLowerCase());
-      type = isActiveVault ? "withdraw" : "deposit";
+    if (receipt?.logs) {
+      // Decode ERC20 Transfer events from receipt
+      const transfers: Array<{
+        token: string;
+        from: string;
+        to: string;
+        amount: bigint;
+      }> = [];
+
+      for (const logEntry of receipt.logs) {
+        try {
+          // Transfer event topic: keccak256("Transfer(address,address,uint256)")
+          if (
+            logEntry.topics &&
+            logEntry.topics.length >= 3 &&
+            logEntry.topics[0] ===
+              "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+          ) {
+            const from = ("0x" + logEntry.topics[1].slice(26)).toLowerCase();
+            const to = ("0x" + logEntry.topics[2].slice(26)).toLowerCase();
+            const amount = BigInt(logEntry.data);
+            transfers.push({
+              token: (logEntry.address as string).toLowerCase(),
+              from,
+              to,
+              amount,
+            });
+          }
+        } catch {
+          // Skip malformed log entries
+        }
+      }
+
+      // Filter out Circle Paymaster gas payments
+      const relevant = transfers.filter(
+        (t) => !(t.token === usdcAddress && t.to === paymaster),
+      );
+
+      // Find USDC transfers involving our wallet
+      const outgoing = relevant.filter(
+        (t) => t.from === wallet && t.token === usdcAddress,
+      );
+      const incoming = relevant.filter(
+        (t) => t.to === wallet && t.token === usdcAddress,
+      );
+
+      const outTotal = outgoing.reduce((s, t) => s + t.amount, 0n);
+      const inTotal = incoming.reduce((s, t) => s + t.amount, 0n);
+
+      if (outTotal > 0n || inTotal > 0n) {
+        tokenIn = "USDC";
+        // Use the larger direction for amount
+        const netAmount = outTotal > inTotal ? outTotal : inTotal;
+        const amountNum = Number(netAmount) / 10 ** USDC_DECIMALS;
+        amountIn = amountNum.toFixed(6);
+        usdValue = parseFloat(amountNum.toFixed(2));
+
+        // For rebalance context, determine direction from net USDC flow
+        if (tx.context === "rebalance") {
+          type = inTotal > outTotal ? "withdraw" : "deposit";
+        }
+      } else {
+        // Check for non-USDC transfers (cbBTC, etc.)
+        const nonUsdcOut = relevant.filter((t) => t.from === wallet && t.token !== usdcAddress);
+        const nonUsdcIn = relevant.filter((t) => t.to === wallet && t.token !== usdcAddress);
+        const anyNonUsdc = nonUsdcOut.length > 0 ? nonUsdcOut[0] : nonUsdcIn.length > 0 ? nonUsdcIn[0] : null;
+        if (anyNonUsdc) {
+          tokenIn = anyNonUsdc.token;
+          amountIn = anyNonUsdc.amount.toString();
+          // USD value unknown for non-USDC tokens
+        }
+      }
     }
 
     txLogger.log({
       type,
-      tokenIn: parsed?.token ?? "unknown",
-      amountIn: parsed?.amount ?? "0",
+      tokenIn,
+      amountIn,
       usdValueAtTime: usdValue,
       txHash: tx.hash,
-      protocol,
+      protocol: undefined,
       vault: tx.to,
     });
-
-    // After logging a deposit, add it to activeVaults so subsequent rebalance logic works
-    if (type === "deposit") {
-      activeVaults.add(tx.to.toLowerCase());
-    }
 
     log.info(`processed tx ${tx.hash} as ${type}`);
   }

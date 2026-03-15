@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config({ quiet: true });
 
-import { getEnv, loadConfig, saveConfig, DATA_DIR, TX_LOG_PATH, PROTOCOL_REGISTRY_PATH } from "./config";
+import { getEnv, loadConfig, saveConfig, DATA_DIR, TX_LOG_PATH, PROTOCOL_REGISTRY_PATH, LOG_PATH } from "./config";
 import {
   CirclePaymasterWalletProvider,
   type CirclePaymasterWalletConfig,
@@ -14,7 +14,7 @@ import { ProfitTracker } from "./modules/portfolio";
 import { TelegramBot } from "./modules/telegram";
 import { ProtocolRegistry } from "./modules/protocol-registry";
 import { FundingMonitor } from "./modules/funding-monitor";
-import { createLogger, safeErrorMessage } from "./notify";
+import { createLogger, safeErrorMessage, enableFileLogging } from "./notify";
 import { runCycleWithNotify } from "./cycle";
 import * as fs from "fs";
 import { type Hex, type Address } from "viem";
@@ -22,6 +22,7 @@ import { type Hex, type Address } from "viem";
 const log = createLogger("Main");
 
 async function main() {
+  enableFileLogging(LOG_PATH);
   const env = getEnv();
   const config = loadConfig();
   log.info("BTC Yield Agent starting...");
@@ -86,7 +87,7 @@ async function main() {
            Then use swap_to_btc to send remaining USDC to ${config.btcCashOutAddress}.
            Report the order ID and transaction hash.`
         );
-        processCapturedTxs(walletProvider.drainTxs(), txLogger, result.output);
+        await processCapturedTxs(walletProvider.drainTxs(), txLogger, walletProvider, walletProvider.getAddress());
       },
     });
     log.info("Telegram bot connected");

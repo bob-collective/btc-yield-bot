@@ -3,9 +3,6 @@ import {
   TxLogger,
   TransactionEntry,
   mapContextToTxType,
-  parseAmountFromOutput,
-  parseProtocolFromOutput,
-  parseUsdValueFromOutput,
   processCapturedTxs,
   isErc20ApprovOrTransfer,
 } from "../modules/transactions";
@@ -95,107 +92,6 @@ describe("mapContextToTxType", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// parseAmountFromOutput tests (from tx-processor.test.ts)
-// ---------------------------------------------------------------------------
-
-describe("parseAmountFromOutput", () => {
-  it("parses integer amount with USDC", () => {
-    const result = parseAmountFromOutput("Deposited 100 USDC into vault");
-    expect(result).toEqual({ amount: "100", token: "USDC" });
-  });
-
-  it("parses decimal amount with USDC", () => {
-    const result = parseAmountFromOutput("Swapped 50.5 USDC for ETH");
-    expect(result).toEqual({ amount: "50.5", token: "USDC" });
-  });
-
-  it("parses small ETH amount", () => {
-    const result = parseAmountFromOutput("Transferred 0.001 ETH to bridge");
-    expect(result).toEqual({ amount: "0.001", token: "ETH" });
-  });
-
-  it("parses WETH", () => {
-    const result = parseAmountFromOutput("Wrapped 1.5 WETH");
-    expect(result).toEqual({ amount: "1.5", token: "WETH" });
-  });
-
-  it("parses wBTC", () => {
-    const result = parseAmountFromOutput("Received 0.05 wBTC");
-    expect(result).toEqual({ amount: "0.05", token: "wBTC" });
-  });
-
-  it("parses WBTC (uppercase)", () => {
-    const result = parseAmountFromOutput("Received 0.1 WBTC from swap");
-    expect(result).toEqual({ amount: "0.1", token: "WBTC" });
-  });
-
-  it("parses BTC", () => {
-    const result = parseAmountFromOutput("Cashed out 0.02 BTC");
-    expect(result).toEqual({ amount: "0.02", token: "BTC" });
-  });
-
-  it("parses cbBTC", () => {
-    const result = parseAmountFromOutput("Deposited 0.5 cbBTC into Morpho");
-    expect(result).toEqual({ amount: "0.5", token: "cbBTC" });
-  });
-
-  it("returns null for unparseable output", () => {
-    expect(parseAmountFromOutput("No amounts here")).toBeNull();
-    expect(parseAmountFromOutput("Just some random text")).toBeNull();
-    expect(parseAmountFromOutput("")).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// parseProtocolFromOutput tests (from tx-processor.test.ts)
-// ---------------------------------------------------------------------------
-
-describe("parseProtocolFromOutput", () => {
-  it("extracts protocol after 'into'", () => {
-    expect(parseProtocolFromOutput("Deposited into Morpho vault")).toBe("Morpho");
-  });
-
-  it("extracts protocol after 'from'", () => {
-    expect(parseProtocolFromOutput("Withdrew from Aave pool")).toBe("Aave");
-  });
-
-  it("extracts protocol after 'via'", () => {
-    expect(parseProtocolFromOutput("Swapped via Sushi router")).toBe("Sushi");
-  });
-
-  it("extracts protocol after 'on'", () => {
-    expect(parseProtocolFromOutput("Staked on Lido")).toBe("Lido");
-  });
-
-  it("returns undefined for no match", () => {
-    expect(parseProtocolFromOutput("No protocol mentioned")).toBeUndefined();
-    expect(parseProtocolFromOutput("")).toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// parseUsdValueFromOutput tests (from tx-processor.test.ts)
-// ---------------------------------------------------------------------------
-
-describe("parseUsdValueFromOutput", () => {
-  it("extracts integer USD value", () => {
-    expect(parseUsdValueFromOutput("Worth $100 at time of tx")).toBe(100);
-  });
-
-  it("extracts decimal USD value", () => {
-    expect(parseUsdValueFromOutput("Value: $100.50")).toBe(100.5);
-  });
-
-  it("extracts large USD value", () => {
-    expect(parseUsdValueFromOutput("Total $12345.67 deposited")).toBe(12345.67);
-  });
-
-  it("returns 0 for no match", () => {
-    expect(parseUsdValueFromOutput("No dollar sign here")).toBe(0);
-    expect(parseUsdValueFromOutput("")).toBe(0);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // isErc20ApprovOrTransfer tests
@@ -239,6 +135,15 @@ describe("isErc20ApprovOrTransfer", () => {
 // ---------------------------------------------------------------------------
 
 describe("processCapturedTxs", () => {
+  const TRANSFER_TOPIC =
+    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const USDC_ADDRESS = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+  const WALLET = "0x65Bc733fc0bb4417A63dE6cc8f7f955985F95e96";
+  const WALLET_PADDED = "0x00000000000000000000000065bc733fc0bb4417a63de6cc8f7f955985f95e96";
+  const VAULT = "0xBEEFFFe68dFc2D3BD1ABdAd37c70634973b16478";
+  const VAULT_PADDED = "0x000000000000000000000000beefffe68dfc2d3bd1abdad37c70634973b16478";
+  const PAYMASTER_PADDED = "0x0000000000000000000000006c973ebe80dcd8660841d4356bf15c32460271c9";
+
   function makeMockLogger() {
     return {
       log: vi.fn(),
@@ -246,133 +151,230 @@ describe("processCapturedTxs", () => {
     } as unknown as TxLogger & { log: ReturnType<typeof vi.fn> };
   }
 
+  function makeTransferLog(
+    token: string,
+    from: string,
+    to: string,
+    amount: bigint,
+  ) {
+    return {
+      address: token,
+      topics: [TRANSFER_TOPIC, from, to],
+      data: "0x" + amount.toString(16).padStart(64, "0"),
+    };
+  }
+
+  function makeMockWalletProvider(receipt: any) {
+    return {
+      waitForTransactionReceipt: vi.fn().mockResolvedValue(receipt),
+    } as any;
+  }
+
   const baseTx: CapturedTx = {
-    hash: "0xabc123",
-    to: "0xvaultAddress",
+    hash: "0xabc123" as `0x${string}`,
+    to: VAULT,
     context: "deploy_funds",
     timestamp: "2026-03-07T00:00:00.000Z",
   };
 
-  it("calls txLogger.log for each captured tx", () => {
+  it("decodes USDC deposit from receipt Transfer events", async () => {
     const mockLogger = makeMockLogger();
-    const txs: CapturedTx[] = [
-      baseTx,
-      { ...baseTx, hash: "0xdef456", context: "rebalance" },
-    ];
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, VAULT_PADDED, 1000_000000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
 
-    processCapturedTxs(txs, mockLogger, "Deposited 100 USDC into Morpho worth $100");
+    await processCapturedTxs([baseTx], mockLogger, wp, WALLET);
 
-    expect(mockLogger.log).toHaveBeenCalledTimes(2);
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "deposit",
+        tokenIn: "USDC",
+        amountIn: "1000.000000",
+        usdValueAtTime: 1000,
+        vault: VAULT,
+        txHash: "0xabc123",
+      }),
+    );
   });
 
-  it("maps context to correct tx type", () => {
+  it("decodes USDC withdraw from receipt Transfer events", async () => {
     const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 100 USDC into Morpho worth $100");
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, VAULT_PADDED, WALLET_PADDED, 500_000000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
+    const tx = { ...baseTx, context: "rebalance" };
+
+    await processCapturedTxs([tx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "withdraw",
+        tokenIn: "USDC",
+        amountIn: "500.000000",
+        usdValueAtTime: 500,
+      }),
+    );
+  });
+
+  it("filters out Circle Paymaster gas transfers", async () => {
+    const mockLogger = makeMockLogger();
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, VAULT_PADDED, 100_000000n),
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, PAYMASTER_PADDED, 50000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
+
+    await processCapturedTxs([baseTx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountIn: "100.000000",
+        usdValueAtTime: 100,
+      }),
+    );
+  });
+
+  it("skips ERC20 approve txs without fetching receipt", async () => {
+    const mockLogger = makeMockLogger();
+    const wp = makeMockWalletProvider({});
+    const approveTx: CapturedTx = {
+      ...baseTx,
+      data: "0x095ea7b3000000000000000000000000spender0000000000000000000000000000",
+    };
+
+    await processCapturedTxs([approveTx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).not.toHaveBeenCalled();
+    expect(wp.waitForTransactionReceipt).not.toHaveBeenCalled();
+  });
+
+  it("falls back to zero values when receipt fetch fails", async () => {
+    const mockLogger = makeMockLogger();
+    const wp = {
+      waitForTransactionReceipt: vi.fn().mockRejectedValue(new Error("RPC timeout")),
+    } as any;
+
+    await processCapturedTxs([baseTx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "deposit",
+        tokenIn: "unknown",
+        amountIn: "0",
+        usdValueAtTime: 0,
+        txHash: "0xabc123",
+      }),
+    );
+  });
+
+  it("handles native ETH txs with no Transfer events", async () => {
+    const mockLogger = makeMockLogger();
+    const receipt = { logs: [] };
+    const wp = makeMockWalletProvider(receipt);
+    const tx = { ...baseTx, context: "cash_out" };
+
+    await processCapturedTxs([tx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "cash_out_btc",
+        tokenIn: "unknown",
+        amountIn: "0",
+      }),
+    );
+  });
+
+  it("determines rebalance deposit from net outgoing USDC", async () => {
+    const mockLogger = makeMockLogger();
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, VAULT_PADDED, 200_000000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
+    const tx = { ...baseTx, context: "rebalance" };
+
+    await processCapturedTxs([tx], mockLogger, wp, WALLET);
 
     expect(mockLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({ type: "deposit" }),
     );
   });
 
-  it("parses amount and token from LLM output", () => {
+  it("does nothing for empty captured array", async () => {
     const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 50.5 USDC into Morpho");
+    const wp = makeMockWalletProvider({});
 
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.objectContaining({ tokenIn: "USDC", amountIn: "50.5" }),
-    );
+    await processCapturedTxs([], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).not.toHaveBeenCalled();
   });
 
-  it("parses protocol from LLM output", () => {
+  it("logs non-USDC token transfers with raw amount", async () => {
     const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 100 USDC into Morpho");
+    const CBBTC = "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf";
+    const CBBTC_PADDED = "0x000000000000000000000000cbb7c0000ab88b473b1f5afd9ef808440eed33bf";
+    const receipt = {
+      logs: [
+        makeTransferLog(CBBTC, WALLET_PADDED, VAULT_PADDED, 50000000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
 
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.objectContaining({ protocol: "Morpho" }),
-    );
-  });
-
-  it("parses USD value from LLM output", () => {
-    const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 100 USDC worth $500.25");
-
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.objectContaining({ usdValueAtTime: 500.25 }),
-    );
-  });
-
-  it("sets vault to the tx 'to' address", () => {
-    const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 100 USDC");
-
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.objectContaining({ vault: "0xvaultAddress" }),
-    );
-  });
-
-  it("sets txHash from the captured tx", () => {
-    const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Deposited 100 USDC");
-
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.objectContaining({ txHash: "0xabc123" }),
-    );
-  });
-
-  it("uses fallback values when LLM output is unparseable", () => {
-    const mockLogger = makeMockLogger();
-    processCapturedTxs([baseTx], mockLogger, "Something happened");
+    await processCapturedTxs([baseTx], mockLogger, wp, WALLET);
 
     expect(mockLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({
-        tokenIn: "unknown",
-        amountIn: "0",
+        tokenIn: CBBTC.toLowerCase(),
+        amountIn: "50000000",
         usdValueAtTime: 0,
       }),
     );
   });
 
-  it("does nothing for empty captured array", () => {
+  it("uses net USDC direction for mixed incoming/outgoing rebalance", async () => {
     const mockLogger = makeMockLogger();
-    processCapturedTxs([], mockLogger, "Deposited 100 USDC");
+    const OTHER_VAULT_PADDED = "0x0000000000000000000000001234567890abcdef1234567890abcdef12345678";
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, OTHER_VAULT_PADDED, WALLET_PADDED, 300_000000n),
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, VAULT_PADDED, 100_000000n),
+      ],
+    };
+    const wp = makeMockWalletProvider(receipt);
+    const tx = { ...baseTx, context: "rebalance" };
 
-    expect(mockLogger.log).not.toHaveBeenCalled();
+    await processCapturedTxs([tx], mockLogger, wp, WALLET);
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "withdraw",
+        amountIn: "300.000000",
+      }),
+    );
   });
 
-  it("skips ERC20 approve txs detected from calldata", () => {
+  it("fetches receipts in parallel", async () => {
     const mockLogger = makeMockLogger();
-    const approveTx: CapturedTx = {
-      ...baseTx,
-      to: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      data: "0x095ea7b3000000000000000000000000spender00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    const receipt = {
+      logs: [
+        makeTransferLog(USDC_ADDRESS, WALLET_PADDED, VAULT_PADDED, 50_000000n),
+      ],
     };
-    processCapturedTxs([approveTx], mockLogger, "Approved 100 USDC");
+    const wp = makeMockWalletProvider(receipt);
+    const txs = [baseTx, { ...baseTx, hash: "0xdef456" as `0x${string}` }];
 
-    expect(mockLogger.log).not.toHaveBeenCalled();
-  });
+    await processCapturedTxs(txs, mockLogger, wp, WALLET);
 
-  it("skips ERC20 transfer txs detected from calldata", () => {
-    const mockLogger = makeMockLogger();
-    const transferTx: CapturedTx = {
-      ...baseTx,
-      to: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      data: "0xa9059cbb000000000000000000000000recipient00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e8",
-    };
-    processCapturedTxs([transferTx], mockLogger, "Transferred 100 USDC");
-
-    expect(mockLogger.log).not.toHaveBeenCalled();
-  });
-
-  it("processes vault interaction txs even to token contract addresses", () => {
-    const mockLogger = makeMockLogger();
-    // A vault deposit tx that happens to go to a token address but has vault deposit calldata
-    const vaultTx: CapturedTx = {
-      ...baseTx,
-      to: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      data: "0x6e553f65000000000000000000000000000000000000000000000000000000000000000a",
-    };
-    processCapturedTxs([vaultTx], mockLogger, "Deposited 100 USDC into Morpho");
-
-    expect(mockLogger.log).toHaveBeenCalledTimes(1);
+    expect(wp.waitForTransactionReceipt).toHaveBeenCalledTimes(2);
+    expect(mockLogger.log).toHaveBeenCalledTimes(2);
   });
 });

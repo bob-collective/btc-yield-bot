@@ -224,7 +224,7 @@ Rules:
   addUsage(step3Result);
   const step3Output = step3Result.output;
   stepOutputs.push(step3Output);
-  processCapturedTxs(walletProvider.drainTxs(), txLogger, step3Output);
+  await processCapturedTxs(walletProvider.drainTxs(), txLogger, walletProvider, walletProvider.getAddress());
 
   // Step 4: Rebalance (heavy agent)
   walletProvider.setContext("rebalance");
@@ -243,7 +243,7 @@ ${protocolRegistry.formatForPrompt()}
   addUsage(step4Result);
   const step4Output = step4Result.output;
   stepOutputs.push(step4Output);
-  processCapturedTxs(walletProvider.drainTxs(), txLogger, step4Output);
+  await processCapturedTxs(walletProvider.drainTxs(), txLogger, walletProvider, walletProvider.getAddress());
 
   // Step 5: Claim rewards (light agent)
   walletProvider.setContext("claim_rewards");
@@ -256,7 +256,7 @@ ${protocolRegistry.formatForPrompt()}
   addUsage(step5Result);
   const step5Output = step5Result.output;
   stepOutputs.push(step5Output);
-  processCapturedTxs(walletProvider.drainTxs(), txLogger, step5Output);
+  await processCapturedTxs(walletProvider.drainTxs(), txLogger, walletProvider, walletProvider.getAddress());
 
   // Log cycle token usage (all LLM steps complete)
   log.info(
@@ -320,7 +320,7 @@ ${protocolRegistry.formatForPrompt()}
   addUsage(step6Result);
   const step6Output = step6Result.output;
   stepOutputs.push(step6Output);
-  processCapturedTxs(walletProvider.drainTxs(), txLogger, step6Output);
+  await processCapturedTxs(walletProvider.drainTxs(), txLogger, walletProvider, walletProvider.getAddress());
 
   return { stepOutputs };
 }
