@@ -190,14 +190,12 @@ describe("ProfitTracker", () => {
       expect(comp.isActive).toBe(true);
     });
 
-    it("falls back to protocol as vault key when vault is missing", () => {
+    it("excludes entries without a vault address", () => {
       const entries = [
         makeTx({ type: "deposit", usdValueAtTime: 100, protocol: "sushi" }),
       ];
       const history = tracker.getVaultHistory(entries);
-      expect(history).toHaveLength(1);
-      expect(history[0].vault).toBe("sushi");
-      expect(history[0].protocol).toBe("sushi");
+      expect(history).toHaveLength(0);
     });
 
     it("marks vault active after partial withdrawal", () => {

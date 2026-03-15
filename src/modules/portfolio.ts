@@ -107,7 +107,7 @@ export async function discoverVaultYields(
 // ---------------------------------------------------------------------------
 
 export interface VaultHistoryEntry {
-  protocol: string;
+  protocol?: string;
   vault: string;
   totalDeposited: number;
   totalWithdrawn: number;
@@ -138,7 +138,7 @@ export class ProfitTracker {
   /** Build per-vault history from deposit/withdraw entries that have a protocol. */
   getVaultHistory(entries: TransactionEntry[]): VaultHistoryEntry[] {
     const relevant = entries.filter(
-      (e) => (e.type === "deposit" || e.type === "withdraw") && e.protocol,
+      (e) => (e.type === "deposit" || e.type === "withdraw") && e.vault,
     );
 
     const vaultMap = new Map<
@@ -147,7 +147,7 @@ export class ProfitTracker {
     >();
 
     for (const entry of relevant) {
-      const key = entry.vault ?? entry.protocol!;
+      const key = entry.vault!;
       const existing = vaultMap.get(key);
 
       if (existing) {
@@ -159,7 +159,7 @@ export class ProfitTracker {
         existing.lastType = entry.type;
       } else {
         vaultMap.set(key, {
-          protocol: entry.protocol!,
+          protocol: entry.protocol ?? undefined,
           vault: key,
           totalDeposited: entry.type === "deposit" ? entry.usdValueAtTime : 0,
           totalWithdrawn: entry.type === "withdraw" ? entry.usdValueAtTime : 0,

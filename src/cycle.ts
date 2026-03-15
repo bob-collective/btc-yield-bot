@@ -137,7 +137,10 @@ async function runCycle(
   let knownPositionsContext = "";
   if (activeVaults.length > 0) {
     const posLines = activeVaults.map(
-      (v) => `- ${v.protocol}: ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)} in vault ${v.vault}`,
+      (v) => {
+        const label = v.protocol ?? `${v.vault.slice(0, 6)}...${v.vault.slice(-4)}`;
+        return `- ${label}: ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)} in vault ${v.vault}`;
+      },
     ).join("\n");
     knownPositionsContext = `
 IMPORTANT — Known vault positions from transaction log (vaults.fyi API has indexing delay for smart accounts):
@@ -155,7 +158,7 @@ If the positions tool returns empty but the above shows active positions, DO NOT
     : "";
   const portfolioSummary = activeVaults.length > 0
     ? `\n\nVault positions${posSource}:\n${activeVaults.map(
-        (v) => `  ${v.protocol} (${v.vault}): ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)}`,
+        (v) => `  ${v.protocol ?? v.vault.slice(0, 10)} (${v.vault}): ~$${(v.totalDeposited - v.totalWithdrawn).toFixed(2)}`,
       ).join("\n")}\nEstimated vault total: ~$${txLogTotal.toFixed(2)}${apiNote}`
     : "\n\nVault positions: none";
   const fullPortfolioOutput = balanceOutput + portfolioSummary;
